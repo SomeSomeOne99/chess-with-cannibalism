@@ -209,8 +209,8 @@ class TextInterface():
     def GetEndMove(self):
         end_not = input("Enter target position (as notation, e.g. 'e4') or 'cancel' to reselect start position: ").lower()
         if end_not == "cancel":
-            return None, True # Reselect start, perpetuate loop
-        return self.ConvertNotationToPosition(end_not), False
+            return None, False # Reselect start position
+        return self.ConvertNotationToPosition(end_not), True
     def ConvertNotationToPosition(self, notation: str):
         return (8 - int(notation[1]), ord(notation[0].lower()) - 97)
 class ChessGame():
@@ -222,11 +222,11 @@ class ChessGame():
         playing = True
         game_won = False
         while playing:
-            self.interface.DisplayBoard(board.board, board.alt_board, turn)
-            if board.CheckInCheck("W" if turn else "B"):
-                print("In check")
             selecting_move = True
             while selecting_move and playing:
+                self.interface.DisplayBoard(board.board, board.alt_board, turn)
+                if board.CheckInCheck("W" if turn else "B"):
+                    print("In check")
                 start, is_castle, playing = self.interface.GetStartMove()
                 if is_castle:
                     if board.CheckCastleValid("W" if turn else "B", start):
@@ -243,19 +243,23 @@ class ChessGame():
                     print("Opponent piece selected")
                     continue
                 moves = board.GetValidMoves(start)
-                selecting_end = True
-                while selecting_end:
-                    if len(moves) > 0:
+                if len(moves) > 0:
+                    selecting_end = True
+                    while selecting_end:
                         self.interface.DisplayBoardWithMoves(board.board, board.alt_board, start, moves, board.FilterAltMoves(start, moves))
-                        end, selecting_move = self.interface.GetEndMove()
+                        end, selecting_end = self.interface.GetEndMove()
+                        if not selecting_end:
+                            break
                         if end in moves:
                             selecting_end = False
                             selecting_move = False
                         else:
                             print("Move invalid")
-                    else:
-                        print("No possible moves")
-                        selecting_end = False # Reselect start move
+                else:
+                    print("No possible moves")
+                    selecting_end = False # Reselect start move
+            if not playing:
+                break
             if is_castle:
                 board.MakeCastle("W" if turn else "B", start)
             else:
